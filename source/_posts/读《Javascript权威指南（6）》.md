@@ -12,6 +12,10 @@ tags:
 * 第6章：对象
 * 第7章：数组
 * 第8章：函数
+* 第9章：类和模块
+* 第13章：web浏览器中的javascript
+* 第14章：Window对象
+* 第18章：脚本化http
 
 <!-- more -->
 
@@ -86,7 +90,7 @@ console.log(a1 === b1); // false
 4.如若想要形如 a = [] 和 b = []相等，自定义一个比较函数，若两者元素都相等，返回true
 
 ### 类型转换
-1. “==”运算符从不试图将其操作数转换为布尔值
+1.“==”运算符从不试图将其操作数转换为布尔值
 ```
 "0" == false    // true
 ```
@@ -876,3 +880,204 @@ console.log(squareofsum(2, 3)); //25
 #### 记忆
 
 ## 第9章：类和模块
+```
+function Range(){}
+Range.prototype = {
+    //constructor: Range,
+    name: '倩'
+};
+var r = new Range();
+console.log(r.constructor); //Object() { [native code] }
+
+var F = function(){};
+var f = new F();
+console.log(f.constructor);
+```
+
+## 第13章：web浏览器中的javascript
+### 安全性
+#### 同源策略
+通俗讲：脚本只能读取和**所属文档来源相同**的窗口和文档的属性
+
+文档的来源包括协议，主机，以及载入文档的url端口：
+1.不同的web服务器
+2.同一主机不同端口
+3.http:协议和https:协议(即使是相同服务器)
+以上三种都具有不同的来源
+
+脚本本身的来源和同源策略不相关，相关的是脚本所嵌入的文档的来源，举个例子
+
+    A源：a.js     a.html
+    B源：b1.html 包含了a.js  还有个b2.html
+    C源：c.html
+这种情况下a.js能够访问b1.html和b2.html，但不能访问a.html或c.html
+
+#### 不严格的同源策略
+1.documet.domain
+使用多个子域的大站点，比如
+home.example.com 和 catalog.example.com
+需要在窗口包含的脚本把domain设置成相同的值
+
+2.标准化：跨域资源共享CORS（cross-origin resource sharing）
+通过
+新的Origin请求头
+和新的Access-Control-Allow-Origin响应头
+来扩展http
+
+它允许服务器用头信息显示地列出源，或使用通配符来匹配所有的源并允许由任何地址请求文件
+
+3.跨文档消息（cross-document messaging）
+允许一个文档的脚本传递文本信息给另一个文档的脚本，不管来源是否相同
+
+使用：Window对象的postMessage()方法
+可以用onmessage事件句处理程序函数来处理
+
+#### 跨站脚本
+cross-site scripting，又叫XSS
+
+**XSS攻击：**
+攻击者通过向目标Web站点注入html标签或脚本。
+
+**情景：**
+web页面动态产生文档内容，并且这些内容是基于用户提交的数据的（并没有从中移除任何html标签来消毒）
+
+**例子：**
+```
+<script>
+    var name = decodeURIComponent(window.location.search.substring(1)) || '';
+    document.write('Hello ' + name);
+</script>
+```
+请求：``http://www.example.com/greeting.html?felbry``
+页面显示：Hello felbry
+
+请求：``http://www.example.com/greeting.html?%3Cscript%3Ealert('you are fighted')%3C/script%3E``
+页面弹出：you are fighted
+同样可以通过script标签引入一个外部的js文件
+
+**防止：**
+1.通过简单的移除（转义）尖括号（基于上例）
+``name = name.replace(/</g, '&lt;').replace(/>/g, '&gt;');``
+
+2.IE8定义了一个toStaticHTML()，移除script标签和其他潜在的可执行内容，不修改不可执行的html
+注：这个方法不是标准，可以仿照着来实现
+
+3.H5的iframe
+H5的iframe的sandbox属性，允许显示不可信的内容，并自动禁用脚本
+
+## 第14章：Window对象
+### 多窗口和窗体
+**不管是窗口还是窗体，其根本是获得所需窗口或窗体的window对象引用**
+
+#### 多窗口通信
+``window.open(url, name, argsList, replaceOrCreate)``
+四个参数，不赘述，详见文档
+
+窗口名字：window.name（可写 writable）
+当调用window.open()方法时，可以通过传入name值指定新建窗口的名字，当然也可以指定已存在的name跳转至对应的窗口。一个window窗口的opener属性对应打开它的窗口，通过这种方式，即可实现窗口间的相互通信
+
+一个窗口关闭，代表它的window对象依然存在，会有个值为true的closed属性，它的document是null，方法通常也不会工作
+```
+win1.html
+<button id="btn1">点击打开新窗口</button>
+    
+<script src="jquery-2.2.4.min.js"></script>
+<script src="win1.js"></script>
+
+win2.html
+<h2 id='p2'>这是初始值</h2>
+
+<script src="jquery-2.2.4.min.js"></script>
+<script src="win2.js"></script>
+
+win1.js
+$(function(){
+    $('#btn1').click(function() {
+        w = window.open('win2.html');
+        w.onload = function(){
+            //访问h2元素值
+            console.log(w.document.getElementById('p2').innerHTML); //这是初始值
+            
+            //新创建p元素
+            var p = w.document.createElement('p');
+            p.innerHTML = 'new create';
+            w.document.body.appendChild(p);
+
+            //更改h2元素值
+            w.document.getElementById('p2').innerHTML = 'changed value';
+        }
+    });
+})
+
+win2.js
+$(function(){
+    opener.document.body.innerHTML = '<h1>哈哈，反向控制！</h1>';
+})
+```
+
+#### 多窗体(iframe)通信
+**只要确定一个iframe的window对象，其他的iframe窗体都可以通过parent或top表示。**
+
+**表示一个iframe的window对象：**
+窗口中iframe元素的contentWindow属性，反向操作（即通过window对象得到iframe元素）用frameElement
+```
+var ele = document.getElementBy..('');
+var frameWin = ele.contentWindow;
+ele === frameWin.frameElement;  //true
+```
+
+**多种方法引用窗口或窗体的子孙窗体：**
+1.frames：每个window对象都有个frames属性，类数组对象，引用自身包含的窗口或窗体的子窗体。可以通过数字或窗体名索引
+比如：引用某个窗口的子窗体，用``frames[0]``；引用某个窗体的兄弟窗体，用``parent.frames[1]``；如果``<iframe>``元素有name属性，可以通过``frames['itsname']``或``frames.itsname``
+2.window[num]
+还可以通过window.length或length查询窗体的编号
+
+**iframe的name属性：**
+1.``<iframe>``元素本身有name属性，会作为这个window.name的值
+2.name可用作一个链接的target属性
+3.name可用作window.open()方法的第二个参数
+
+#### 总结
+**窗口(浏览器窗口或标签页)之间通信：**
+1.window.open()
+2.postMessage() //暂不讨论
+
+**窗体(iframe)之间通信：**
+1.通过parent（直接父级）或top（顶级祖先）定位到所需的window对象，从而获得其引用
+2.frames属性
+
+## 第18章：脚本化http
+### 跨域http请求
+如果浏览器支持XMLHttpRequest的CORS且实现跨域请求的网站决定使用CORS允许跨域请求，那么同源策略将不放宽而跨域请求就会正常工作
+
+实现CORS支持的跨域请求工作不需要做任何事情，但有些安全细节：
+1.若给XHR对象的open()方法传入用户名和密码，不会通过跨域请求发送
+2.跨域请求也不会包含其他任何的用户证书：cookie和HTTP身份验证令牌（token）
+3.如跨域请求需这几种凭证才能成功，必须在send()发送请求前设置XHR对象的withCredentials属性为true（不常用，但withCredentials的存在可测试浏览器是否支持CORS）
+
+### 借助``<script>``发送http请求：JSONP
+1.P代表“填充”或“前缀”
+2.响应内容必须用js函数名和圆括号包裹起来
+
+    若单纯返回一个json对象，客户端会报 Uncaught SyntaxError: Unexpected token : 错误
+3.包裹后的响应会成为script元素的内容
+4.一般通过指定一个查询参数的值来告诉服务端这是一个``<script>``元素调用，应返回jsonp响应，而不是普通的json响应。（一般将这个参数放置在多个参数的最后，命名为jsonp或callback）
+5.服务端不会强制指定客户端必须实现的回调函数名称，而是使用查询参数的值（即jsonp或callback的值），这样达到了和客户端函数名的对应。
+
+```
+A源客户端：
+var script = document.createElement('script');
+script.src = 'http://felbry.leanapp.cn/jsonp?arg1=girl&jsonpCB=jsonpCallback'
+document.body.appendChild(script);
+
+function jsonpCallback(res){
+    alert(res.name);    //倩倩
+}
+
+B源服务端(node.js的express框架)：
+app.get('/jsonp', function(req, res){
+    console.log(req.query.jsonpCB); //jsonpCallback
+    console.log(req.query.arg1);    //girl
+    res.send(req.query.jsonpCB + "({name: '倩倩'})"); //jsonpCallback({name: '倩倩'})
+})
+```
