@@ -307,6 +307,9 @@ basedir=D:/mysql-5.6.13
 **# 设置mysql数据库的数据的存放目录**
 datadir=D:/mysql-5.6.13/data
 
+    补充：
+    这里的basedir和datadir千万不要乱写，其实就是解压出来的文件夹路径（也可以看作是你设置MYSQL_HOME的路径）
+
 **# 字符编码**
 [client]
 default-character-set=utf8
@@ -324,11 +327,37 @@ collation-server=utf8_unicode_ci
 [修改MySQL字符编码为UTF-8解决中文乱码](http://www.osyunwei.com/archives/9178.html)
 [Mysql中文乱码以及Incorrect string value的问题](http://blog.sina.com.cn/s/blog_76786df30101aqfp.html)
 
+    补充：
+    以下4, 5步骤精简为（所处目录路径为 %MYSQL_HOME%/bin，即上述配置的path路径）：
+    ```
+    4. mysqld -install
+    ```
+    ```
+    5. mysqld --initialize --user=root --console
+    ```
+    其本质是一样的
+
 4.安装服务：以管理员方式进入cmd
-执行mysqld --install mysql --defaults-file="my.ini"   **这里的my.ini文件路径建议用绝对路径而不是我这个相对路径**
+执行
+```
+mysqld --install mysql --defaults-file="my.ini"
+```
+**这里的my.ini文件路径建议用绝对路径而不是我这个相对路径**
 
 5.初始化服务（为了生成data目录）
-执行mysqld --initialize --user=mysql --console
+执行
+```
+mysqld --initialize --user=mysql --console
+```
+
+    补充：
+    问题一：[Warning] TIMESTAMP with implicit DEFAULT value is deprecated. Please use --explicit_defaults_for_timestamp server option (see documentation for more details).
+    解决方案：在[my.ini]的 mysqld 字段增加 explicit_defaults_for_timestamp=true
+    ```
+    [mysqld]
+    explicit_defaults_for_timestamp=true
+    ```
+    详细链接：http://www.cnblogs.com/digdeep/p/4727715.html
 
 打印形如：
 
